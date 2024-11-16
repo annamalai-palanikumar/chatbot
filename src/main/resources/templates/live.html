@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Live Support</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script>
+        var stompClient = null;
+
+        function connect() {
+            var socket = new SockJS('/support-websocket');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+
+                // Subscribe to the general customer topic to receive messages from customers
+                stompClient.subscribe('/topic/customer', function (messageOutput) {
+                    var message = JSON.parse(messageOutput.body);
+                    displayMessage(message);
+                });
+            });
+        }
+
+        function sendResponse() {
+            var messageContent = document.getElementById('responseContent').value;
+            var message = {
+                from: 'Support',
+                to: 'customer123',  // Replace with the actual customer ID
+                content: messageContent
+            };
+            stompClient.send("/app/sendResponse", {}, JSON.stringify(message));  // Send response to the customer's queue
+            displayMessage(message);
+        }
+
+        function displayMessage(message) {
+            var responseArea = document.getElementById('responseArea');
+            responseArea.innerHTML += "<p><strong>" + message.from + ":</strong> " + message.content + "</p>";
+        }
+
+        window.onload = connect;
+    </script>
+</head>
+<body>
+    <h2>Live Support</h2>
+    <div id="responseArea"></div>
+    <textarea id="responseContent" rows="4" cols="50"></textarea><br/>
+    <button onclick="sendResponse()">Send Response</button>
+</body>
+</html>

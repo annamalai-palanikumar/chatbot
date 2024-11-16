@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Customer Support</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script>
+        var stompClient = null;
+
+        function connect() {
+            var socket = new SockJS('/support-websocket');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+
+                // Subscribe to the general customer topic and the customer-specific queue
+                stompClient.subscribe('/topic/customer', function (messageOutput) {
+                    var message = JSON.parse(messageOutput.body);
+                    displayMessage(message);
+                });
+
+                var customerId = "customer123";  // Replace with actual customer ID
+                stompClient.subscribe('/queue/' + customerId, function (messageOutput) {
+                    var message = JSON.parse(messageOutput.body);
+                    displayMessage(message);  // Display the customer service response
+                });
+            });
+        }
+
+        function sendMessage() {
+            var messageContent = document.getElementById('messageContent').value;
+            var message = {
+                from: 'Customer',
+                to: 'Support',  // Directing the message to customer service
+                content: messageContent
+            };
+            stompClient.send("/app/sendMessage", {}, JSON.stringify(message));
+        }
+
+        function displayMessage(message) {
+            var messageArea = document.getElementById('messageArea');
+            messageArea.innerHTML += "<p><strong>" + message.from + ":</strong> " + message.content + "</p>";
+        }
+
+        window.onload = connect;
+    </script>
+</head>
+<body>
+    <h2>Customer Support</h2>
+    <div id="messageArea"></div>
+    <textarea id="messageContent" rows="4" cols="50"></textarea><br/>
+    <button onclick="sendMessage()">Send</button>
+</body>
+</html>
